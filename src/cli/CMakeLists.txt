@@ -42,8 +42,8 @@ include_directories (${INCL_DIR}
 
 # CLI libraries source files
 set (SOURCES_CLI ${PROJECT_SOURCE_DIR}/sysmon_vty.c
-    )
-
+		     ${OPSCLI_INCLUDE_DIRS}
+		    )
 
 add_library (${LIBSYSMONDCLI} SHARED ${SOURCES_CLI})
 

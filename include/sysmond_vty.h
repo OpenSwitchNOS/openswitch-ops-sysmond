@@ -1,6 +1,6 @@
 /* SYSMOND CLI commands header file
  *
- * Copyright (C) 2016 Hewlett Packard Enterprise Development LP
+ * Copyright (C) 2015-2016 Hewlett Packard Enterprise Development LP
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,4 +26,12 @@
 #define TOP_DISPLAY_STR "Top command\n"
 #define CPU_DISPLAY_STR "System CPU usage information\n"
 #define MEMORY_DISPLAY_STR "System Memory usage information\n"
+#define SYSTEM_DISPLAY_STR "System information\n"
+#define CPU_DISPLAY_STR "System CPU usage information\n"
+#define MEMORY_DISPLAY_STR "System Memory usage information\n"
+#define MONITOR_DISPLAY_STR "System Monitoring configuration\n"
+#define POLL_TIMER_DISPLAY_STR "System Monitoring poll-timer configuration\n"
+#define POLL_TIMER_RANGE_DISPLAY_STR "Interval between successive OVSDB updates\n"
+
+
 #endif // _SYSMOND_VTY_H
