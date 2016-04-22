@@ -40,6 +40,9 @@
 
 VLOG_DEFINE_THIS_MODULE(top_cpu_vty);
 
+/*Global variables*/
+extern struct ovsdb_idl *idl;
+
 /*================================================================================================*/
 /* TOP CLI Implementations */
 static void
@@ -58,8 +61,228 @@ vtysh_top_cpu_handler()
     execute_command("top", argc, (const char **) argv);
 }
 
+
+/*================================================================================================*/
+/* SHOW CLI Implementations */
+static void
+vtysh_show_system_memory_handler()
+{
+  vtysh_top_memory_handler();
+}
+
+
+/*
+
+
+
+switch#show system cpu
+CPU Average (in %)
+Average for last 1  min: 3.44
+Average for last 5  min: 2.70
+Average for last 15 min: 1.50
+CPU util to run user applications        : 9.1
+CPU util to run kernel processes         : 1.6
+CPU idle time waiting for I/O completion : 1.6
+CPU util for servicing h/w interrupts    : 0.1
+CPU util for servicing s/w interrupts    : 0.2
+
+Physical memory (in KiB)
+Total memory      : 8669756
+Total free memory : 131108
+Total used memory : 1176480
+Total buffers     : 7362168
+
+Virtual memory (in KiB)
+Total memory      : 8385532
+Total free memory : 8364232
+Total used memory : 21300
+Total buffers     : 7136604
+
+Total tasks in system   : 43
+Number of tasks running : 1
+Number of tasks sleeping: 40
+Number of tasks stopped : 0
+Number of zombies       : 2
+
+  PID USER      State  %CPU  COMMAND
+-------------------------------------
+    1 root      S       0.1  systemd
+   18 root      S       1.2  systemd-journal
+   82 root      S       0.0  systemd-udevd
+  131 message+  S       1.1  dbus-daemon
+*/
+#define AVG_1_MIN "avg_for_last_1_min"
+#define AVG_5_MIN "avg_for_last_5_min"
+#define AVG_15_MIN "avg_for_last_15_min"
+#define USER_PROCESS_RUN "user_process_run"
+#define KERNEL_PROCESS_RUN "kernel_process_run"
+#define WAIT_FOR_IO_COMPLETION "waiting_on_io_completion"
+#define SERVICING_HW_INTERRUPTS "servicing_hw_interrupts"
+#define SERVICING_SW_INTERRUPTS "servicing_sw_interrupts"
+#define PHYS_TOTAL_MEMORY_SIZE "phys_total_memory_size"
+#define PHYS_FREE_MEMORY_SIZE "phys_free_memory_size"
+#define PHYS_USED_MEMORY_SIZE "phys_used_memory_size"
+#define PHYS_BUFFER_SIZE "phys_buffer_size"
+#define VIRT_TOTAL_MEMORY_SIZE "virtual_total_memory_size"
+#define VIRT_FREE_MEMORY_SIZE "virtual_free_memory_size"
+#define VIRT_USED_MEMORY_SIZE "virtual_used_memory_size"
+#define VIRT_BUFFER_SIZE "virtual_buffer_size"
+#define PNAME "pname"
+#define USER "user"
+#define VIRTUAL_MEMORY_SIZE "virtual_memory_size"
+#define RESIDENT_MEMORY_SIZE "resident_memory_size"
+#define SHARED_MEMORY_SIZE "shared_memory_size"
+#define PROCESS_STATUS "process_status"
+#define MEMORY_USAGE "memory_usage"
+#define LAST_CPU_USAGE "last_cpu_usage"
+#define DEFAULT_UTIL "0.0"
+
+static void
+vtysh_show_system_cpu_handler()
+{
+    const struct ovsrec_system *ovs_system = NULL;
+    const struct ovsrec_system_health *ovs_system_health = NULL;
+    const struct ovsrec_process_info *ovs_process_info= NULL;
+    const char *buf = NULL;
+    const char *pname_buf = NULL;
+    const char *user_buf = NULL;
+    const char *virt_mem_size_buf = NULL;
+    const char *res_mem_size_buf = NULL;
+    const char *shar_mem_size_buf = NULL;
+    const char *process_status_buf = NULL;
+    const char *mem_usage_buf = NULL;
+    const char *last_cpu_usage_buf = NULL;
+
+    /* Get access to the System Table */
+    ovs_system = ovsrec_system_first(idl);
+    if (NULL == ovs_system) {
+         vty_out(vty, "Could not access the System Table\n");
+         return;
+    }
+
+    OVSREC_SYSTEM_HEALTH_FOR_EACH(ovs_system_health, idl) {
+      vty_out(vty, "CPU Average (in percentage)\n");
+      buf = smap_get(&ovs_system_health->cpu_usage, AVG_1_MIN);
+      vty_out(vty, "Average for last 1  min : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, AVG_5_MIN);
+      vty_out(vty, "Average for last 5  min : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, AVG_15_MIN);
+      vty_out(vty, "Average for last 15 min : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, USER_PROCESS_RUN);
+      vty_out(vty, "CPU util to run user applications            : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, KERNEL_PROCESS_RUN);
+      vty_out(vty, "CPU util to run kernel processes             : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, WAIT_FOR_IO_COMPLETION);
+      vty_out(vty, "CPU idle time waiting for I/O completion     : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, SERVICING_HW_INTERRUPTS);
+      vty_out(vty, "CPU util for servicing h/w interrupts       : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, SERVICING_SW_INTERRUPTS);
+      vty_out(vty, "CPU util for servicing s/w interrupts       : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+
+      vty_out(vty, "Physical memory (in KiB)\n");
+      buf = smap_get(&ovs_system_health->cpu_usage, PHYS_TOTAL_MEMORY_SIZE);
+      vty_out(vty, "Total memory        : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, PHYS_FREE_MEMORY_SIZE);
+      vty_out(vty, "Total free memory   : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, PHYS_USED_MEMORY_SIZE);
+      vty_out(vty, "Total used memory   : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, PHYS_BUFFER_SIZE);
+      vty_out(vty, "Total buffers       : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+
+      vty_out(vty, "Virtual memory (in KiB)\n");
+      buf = smap_get(&ovs_system_health->cpu_usage, VIRT_TOTAL_MEMORY_SIZE);
+      vty_out(vty, "Total memory        : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, VIRT_FREE_MEMORY_SIZE);
+      vty_out(vty, "Total free memory   : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, VIRT_USED_MEMORY_SIZE);
+      vty_out(vty, "Total used memory   : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+      buf = smap_get(&ovs_system_health->cpu_usage, VIRT_BUFFER_SIZE);
+      vty_out(vty, "Total buffers       : %s\n", ((buf) ? buf : DEFAULT_UTIL));
+    }
+
+    vty_out(vty, "\n\n");
+    //vty_out(vty, "PID USER      State  %CPU  COMMAND\n");
+
+    OVSREC_PROCESS_INFO_FOR_EACH(ovs_process_info, idl) {
+      pname_buf = smap_get(&ovs_process_info->details, PNAME);
+      user_buf = smap_get(&ovs_process_info->details, USER);
+      virt_mem_size_buf = smap_get(&ovs_process_info->details, VIRTUAL_MEMORY_SIZE);
+      res_mem_size_buf = smap_get(&ovs_process_info->details, RESIDENT_MEMORY_SIZE);
+      shar_mem_size_buf = smap_get(&ovs_process_info->details, SHARED_MEMORY_SIZE);
+      process_status_buf = smap_get(&ovs_process_info->details, PROCESS_STATUS);
+      mem_usage_buf = smap_get(&ovs_process_info->details, MEMORY_USAGE);
+      last_cpu_usage_buf = smap_get(&ovs_process_info->details, LAST_CPU_USAGE);
+      vty_out(vty, "%s %s %s %s %s %s %s %s\n",pname_buf,user_buf,\
+          virt_mem_size_buf,res_mem_size_buf,\
+          process_status_buf,mem_usage_buf,\
+          shar_mem_size_buf, last_cpu_usage_buf);
+    }
+
+}
+
 /*================================================================================================*/
 /* CLI Definitions */
+
+DEFUN ( vtysh_show_system_cpu,
+        vtysh_show_system_cpu_cmd,
+        "show system cpu",
+        SHOW_STR
+        SYSTEM_DISPLAY_STR
+        CPU_DISPLAY_STR
+      )
+{
+    vtysh_show_system_cpu_handler();
+    return CMD_SUCCESS;
+}
+
+DEFUN ( vtysh_show_system_memory,
+        vtysh_show_system_memory_cmd,
+        "show system memory",
+        SHOW_STR
+        SYSTEM_DISPLAY_STR
+        MEMORY_DISPLAY_STR
+      )
+{
+    vtysh_show_system_memory_handler();
+    return CMD_SUCCESS;
+}
+
+DEFUN ( vtysh_set_monitor_poll_timer,
+        vtysh_set_monitor_poll_timer_cmd,
+        "monitor poll-timer <5-15>",
+        MONITOR_DISPLAY_STR
+        POLL_TIMER_DISPLAY_STR
+        POLL_TIMER_RANGE_DISPLAY_STR
+      )
+{
+    /*
+     * int ret_code = CMD_SUCCESS;
+     */
+    /*
+     * ntp_cli_ntp_auth_enable_params_t ntp_auth_enable_params;
+     * ntp_auth_enable_get_default_parameters(&ntp_auth_enable_params);
+     *
+     * if (vty_flags & CMD_FLAG_NO_CMD) {
+     *     ntp_auth_enable_params.no_form = 1;
+     * }
+     *
+     * ret_code = vtysh_ovsdb_ntp_auth_enable_set(&ntp_auth_enable_params);
+     */
+    /*
+     * return ret_code;
+     */
+    return CMD_SUCCESS;
+}
+
+
+DEFUN_NO_FORM ( vtysh_set_monitor_poll_timer,
+        vtysh_set_monitor_poll_timer_cmd,
+        "monitor poll-timer <5-15>",
+        MONITOR_DISPLAY_STR
+        POLL_TIMER_DISPLAY_STR
+        POLL_TIMER_RANGE_DISPLAY_STR
+      );
+
 
 DEFUN_NOLOCK ( vtysh_top_cpu,
         vtysh_top_cpu_cmd,
@@ -103,6 +326,15 @@ void cli_post_init(void)
 
     install_element (VIEW_NODE, &vtysh_top_memory_cmd);
     install_element (ENABLE_NODE, &vtysh_top_memory_cmd);
+
+    install_element (VIEW_NODE, &vtysh_show_system_cpu_cmd);
+    install_element (ENABLE_NODE, &vtysh_show_system_cpu_cmd);
+
+    install_element (VIEW_NODE, &vtysh_show_system_memory_cmd);
+    install_element (ENABLE_NODE, &vtysh_show_system_memory_cmd);
+
+    install_element (CONFIG_NODE, &vtysh_set_monitor_poll_timer_cmd);
+    install_element (CONFIG_NODE, &no_vtysh_set_monitor_poll_timer_cmd);
 
 }
 
